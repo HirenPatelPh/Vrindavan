@@ -1,0 +1,24 @@
+# Caddy config for Vrindavan.
+#
+# SITE_ADDRESS controls the site + TLS behaviour:
+#   - a real domain  (app.yourdomain.com)  -> Caddy auto-provisions a Let's Encrypt HTTPS cert
+#   - ":80"                                 -> plain HTTP, useful for a first smoke test before DNS
+#
+# All backend traffic (the NestJS global prefix /api, the excluded /health route, and the
+# /uploads static mount) is proxied to the backend container. Everything else is the Flutter
+# single-page app, so unknown paths fall back to index.html for client-side routing.
+
+{$SITE_ADDRESS} {
+	encode gzip zstd
+
+	@backend path /api/* /uploads/* /health
+	handle @backend {
+		reverse_proxy backend:3000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

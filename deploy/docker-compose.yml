@@ -1,0 +1,95 @@
+name: vrindavan
+
+# Single-box production stack: Postgres + one-shot migrator + NestJS API + Caddy(web+TLS).
+# All configuration comes from ./.env (copy .env.prod.example -> .env and fill it in).
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Postgres 18+ images store data in a versioned subdir and require the mount at
+      # /var/lib/postgresql (NOT the pre-18 /var/lib/postgresql/data, which 18+ rejects on boot).
+      - pgdata:/var/lib/postgresql
+      # Genesis SQL, mounted read-only. Applied once, on first boot, by the init script below.
+      - ../database:/database:ro
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Not published to the host — only the backend/migrate containers reach it over the internal
+    # network. (Uncomment to connect a DB GUI from the host during setup.)
+    # ports: ["127.0.0.1:5432:5432"]
+
+  # One-shot: baselines the genesis schema in schema_migrations and applies any
+  # database/migrations/tenant_changes/*.sql to tenant_template + every existing tenant. Runs to
+  # completion on every `up`, then exits; safe to re-run (idempotent — tracked in schema_migrations).
+  migrate:
+    image: vrindavan-backend:latest
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    command: ["node", "dist/infrastructure/migrations/migration-runner.cli.js"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+
+  backend:
+    image: vrindavan-backend:latest
+    # Reuses the image built by the `migrate` service (same tag) — no second build.
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Config comes from the .env file directly (env_file), NOT an enumerated environment: block.
+    # This matters: the backend's Joi schema rejects an *empty* SMTP_HOST/SMTP_PORT/etc. (empty
+    # string != absent), and SMTP is only required when EMAIL_PROVIDER=smtp. Enumerating them with
+    # `${SMTP_HOST:-}` would inject empty strings and crash console-mode boots. env_file passes only
+    # the keys actually present in .env, so unset optionals stay absent and the app's own defaults
+    # (15m TTL, console email, etc.) apply. Unknown extra keys (SITE_ADDRESS, POSTGRES_*) are
+    # harmless — the config validator allows unknown env vars (it already validates all of
+    # process.env, which is full of PATH/HOME/etc.).
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      # Product images live on disk (not in the DB) — persist them across redeploys AND back
+      # them up separately (see backup.sh). process.cwd() in the container is /app/backend.
+      - uploads:/app/backend/uploads
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        API_BASE_URL: ${API_BASE_URL}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

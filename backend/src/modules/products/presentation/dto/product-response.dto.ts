@@ -1,0 +1,72 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Product } from '../../domain/product.entity';
+
+export class ProductResponseDto {
+  @ApiProperty() id: string;
+  @ApiProperty() name: string;
+  @ApiProperty() sku: string;
+  @ApiProperty({ nullable: true }) barcode: string | null;
+  @ApiProperty({ nullable: true }) qrCode: string | null;
+  @ApiProperty() categoryId: string;
+  @ApiProperty({ nullable: true }) subCategoryId: string | null;
+  @ApiProperty({ nullable: true }) brandId: string | null;
+  @ApiProperty({ nullable: true }) hsnId: string | null;
+  @ApiProperty({ nullable: true }) gstId: string | null;
+  @ApiProperty() baseUnitId: string;
+  @ApiProperty() purchasePrice: number;
+  @ApiProperty() sellingPrice: number;
+  @ApiProperty({ nullable: true }) mrp: number | null;
+  @ApiProperty() minimumStock: number;
+  @ApiProperty({ nullable: true }) maximumStock: number | null;
+  @ApiProperty() reorderLevel: number;
+  @ApiProperty() openingStock: number;
+  @ApiProperty({ nullable: true }) piecesPerBox: number | null;
+  @ApiProperty({ nullable: true }) piecesPerBag: number | null;
+  @ApiProperty({ nullable: true }) weight: number | null;
+  @ApiProperty({ nullable: true }) weightUnit: string | null;
+  @ApiProperty({ nullable: true }) dimensionLength: number | null;
+  @ApiProperty({ nullable: true }) dimensionWidth: number | null;
+  @ApiProperty({ nullable: true }) dimensionHeight: number | null;
+  @ApiProperty({ nullable: true }) dimensionUnit: string | null;
+  @ApiProperty() hasBatchTracking: boolean;
+  @ApiProperty() hasExpiryTracking: boolean;
+  @ApiProperty({ nullable: true }) remarks: string | null;
+  @ApiProperty() isActive: boolean;
+  @ApiProperty() createdAt: Date;
+  @ApiProperty() updatedAt: Date;
+
+  constructor(p: Product) {
+    this.id = p.id;
+    this.name = p.name;
+    this.sku = p.sku;
+    this.barcode = p.barcode;
+    this.qrCode = p.qrCode;
+    this.categoryId = p.categoryId;
+    this.subCategoryId = p.subCategoryId;
+    this.brandId = p.brandId;
+    this.hsnId = p.hsnId;
+    this.gstId = p.gstId;
+    this.baseUnitId = p.baseUnitId;
+    this.purchasePrice = p.purchasePrice;
+    this.sellingPrice = p.sellingPrice;
+    this.mrp = p.mrp;
+    this.minimumStock = p.minimumStock;
+    this.maximumStock = p.maximumStock;
+    this.reorderLevel = p.reorderLevel;
+    this.openingStock = p.openingStock;
+    this.piecesPerBox = p.piecesPerBox;
+    this.piecesPerBag = p.piecesPerBag;
+    this.weight = p.weight;
+    this.weightUnit = p.weightUnit;
+    this.dimensionLength = p.dimensionLength;
+    this.dimensionWidth = p.dimensionWidth;
+    this.dimensionHeight = p.dimensionHeight;
+    this.dimensionUnit = p.dimensionUnit;
+    this.hasBatchTracking = p.hasBatchTracking;
+    this.hasExpiryTracking = p.hasExpiryTracking;
+    this.remarks = p.remarks;
+    this.isActive = p.isActive;
+    this.createdAt = p.createdAt;
+    this.updatedAt = p.updatedAt;
+  }
+}

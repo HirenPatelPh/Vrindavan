@@ -1,0 +1,14 @@
+# Build-context trimming for the deploy Dockerfiles (context is the repo root).
+# Keeps large/irrelevant trees out of the image build for speed.
+
+**/node_modules
+**/.dart_tool
+**/build
+frontend/build
+backend/dist
+**/.git
+**/*.log
+deploy/backups
+**/.DS_Store
+**/coverage
+scratchpad

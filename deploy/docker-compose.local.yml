@@ -1,0 +1,18 @@
+# Local smoke-test override — lets you run the whole stack on your own machine (no domain, no TLS)
+# before pointing DNS at the VPS. Verified end-to-end with this exact setup.
+#
+# Usage (from deploy/):
+#   1. cp .env.prod.example .env   and set, for a LOCAL run:
+#        SITE_ADDRESS=:80                         # Caddy listens on container port 80 (plain HTTP)
+#        API_BASE_URL=http://localhost:8088/api   # baked into the web build (rebuild web if changed)
+#      plus any POSTGRES_PASSWORD / *_SECRET values (they can be throwaway locally).
+#   2. docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#   3. open http://localhost:8088   (health: curl http://localhost:8088/health)
+#   4. docker compose -f docker-compose.yml -f docker-compose.local.yml down -v   # wipe when done
+#
+# It maps host 8088 -> container 80 so it won't collide with anything already on your port 80,
+# and (via !override) replaces the base file's 80/443 publish rather than merging with it.
+services:
+  web:
+    ports: !override
+      - "8088:80"

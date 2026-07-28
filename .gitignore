@@ -1,0 +1,46 @@
+# ── Secrets / env ──────────────────────────────────────────────────────────
+# Never commit real env files. Only the *.example templates are tracked.
+.env
+.env.*
+!.env.example
+!*.env.example
+!.env.prod.example
+deploy/.env
+deploy/.env.*
+!deploy/.env.prod.example
+backend/.env
+backend/.env.*
+
+# ── Backups (may contain a full DB dump) ────────────────────────────────────
+deploy/backups/
+
+# ── Node / NestJS backend ───────────────────────────────────────────────────
+node_modules/
+dist/
+coverage/
+*.log
+
+# ── Flutter / Dart frontend ─────────────────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+frontend/build/
+build/
+
+# ── Uploads (runtime user data, not source) ─────────────────────────────────
+backend/uploads/
+uploads/
+
+# ── OS / editor cruft ───────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+*.swp
+.idea/
+*.iml
+
+# ── Local tooling ───────────────────────────────────────────────────────────
+.claude/
+
+# ── Large media (demo videos etc. — share out-of-band, not in git) ──────────
+*.mp4
+*.mov
