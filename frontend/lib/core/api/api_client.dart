@@ -13,10 +13,20 @@ const _skipAuthKey = 'skipAuth';
 /// up and forcing a logout via [onSessionExpired].
 class ApiClient {
   ApiClient({required this._tokenStorage}) {
-    _dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl, connectTimeout: const Duration(seconds: 15)));
+    _dio = Dio(BaseOptions(
+      baseUrl: AppConfig.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      // Without a receiveTimeout a request that connects but never gets a response hangs
+      // forever, freezing flows that await it (e.g. logout). Bound it.
+      receiveTimeout: const Duration(seconds: 30),
+    ));
     // Separate instance for the refresh call itself — must never carry the interceptor's
     // auth-header/401-retry logic, or a failed refresh could recurse into itself.
-    _refreshDio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl, connectTimeout: const Duration(seconds: 15)));
+    _refreshDio = Dio(BaseOptions(
+      baseUrl: AppConfig.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
+    ));
 
     _dio.interceptors.add(InterceptorsWrapper(onRequest: _onRequest, onError: _onError));
   }

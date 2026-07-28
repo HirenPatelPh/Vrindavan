@@ -51,19 +51,65 @@ class AppShell extends ConsumerWidget {
       actions: [
         if (session != null)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Center(
-              child: Text(
-                session.user.email,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.sidebarUnselected),
+            padding: const EdgeInsets.only(right: 8),
+            child: PopupMenuButton<String>(
+              tooltip: 'Account',
+              position: PopupMenuPosition.under,
+              onSelected: (value) {
+                if (value == 'logout') ref.read(authProvider.notifier).logout();
+              },
+              itemBuilder: (context) => [
+                // Non-selectable header showing who's signed in.
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        session.user.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(session.user.email, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.logout, color: Color(0xFFDC2626)),
+                    title: Text('Sign out', style: TextStyle(color: Color(0xFFDC2626))),
+                  ),
+                ),
+              ],
+              // The clickable chip in the top-right: avatar + email + caret.
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppTheme.accent,
+                    child: Text(
+                      _userInitials(session.user.name, session.user.email),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F3D34)),
+                    ),
+                  ),
+                  if (width >= 500) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      session.user.email,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white),
+                    ),
+                  ],
+                  const Icon(Icons.arrow_drop_down, color: AppTheme.sidebarUnselected),
+                ],
               ),
             ),
           ),
-        IconButton(
-          tooltip: 'Sign out',
-          icon: const Icon(Icons.logout),
-          onPressed: () => ref.read(authProvider.notifier).logout(),
-        ),
       ],
     );
 
@@ -219,4 +265,15 @@ class _AppDrawer extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 1–2 uppercase initials for the account-menu avatar: from the user's name when present
+/// (first + last word), otherwise the first letter of their email.
+String _userInitials(String name, String email) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) {
+    return email.isNotEmpty ? email[0].toUpperCase() : '?';
+  }
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts.first[0] + parts.last[0]).toUpperCase();
 }
