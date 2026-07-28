@@ -45,7 +45,13 @@ services:
 
   backend:
     image: vrindavan-backend:latest
-    # Reuses the image built by the `migrate` service (same tag) — no second build.
+    # Same image + build as `migrate` (same tag) — BuildKit builds it once and both reuse it.
+    # Both services MUST carry the build section: without it, `docker compose up` treats this as a
+    # registry image and tries to *pull* `vrindavan-backend:latest` (which doesn't exist remotely),
+    # failing with "pull access denied" unless the image was pre-built by hand first.
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
     restart: unless-stopped
     depends_on:
       db:
