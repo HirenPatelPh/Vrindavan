@@ -27,20 +27,6 @@ final receivablesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>
   return (data as List).cast<Map<String, dynamic>>();
 });
 
-final gstSummaryProvider = FutureProvider.autoDispose<Map<String, double>>((ref) async {
-  final api = ref.read(apiClientProvider);
-  final now = DateTime.now();
-  final from = '${now.year - 1}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  final to = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  double sumTax(dynamic rows) =>
-      (rows as List).fold(0.0, (a, r) => a + ((r['taxAmount'] as num?)?.toDouble() ?? 0));
-  final out = await api.get('/reports/gst-output-summary', queryParameters: {'fromDate': from, 'toDate': to});
-  final inp = await api.get('/reports/gst-input-summary', queryParameters: {'fromDate': from, 'toDate': to});
-  final output = sumTax(out);
-  final input = sumTax(inp);
-  return {'output': output, 'input': input, 'net': output - input};
-});
-
 /// The advanced analytics band shown at the top of the dashboard (above the existing sections):
 /// KPI tiles with sparklines, a category-mix donut, top-products bars, receivables aging, and a
 /// GST output/input/net card. Reuses existing dashboard providers where possible.
@@ -59,16 +45,16 @@ class DashboardAdvancedSection extends StatelessWidget {
           children: [
             Expanded(child: _CategoryDonutCard()),
             SizedBox(width: 16),
-            Expanded(child: _TopProductsCard()),
+            Expanded(child: _StockHealthCard()),
           ],
         ),
         SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _ReceivablesAgingCard()),
+            Expanded(child: _TopProductsCard()),
             SizedBox(width: 16),
-            Expanded(child: _GstCard()),
+            Expanded(child: _ReceivablesAgingCard()),
           ],
         ),
       ],
@@ -176,8 +162,24 @@ class _KpiRow extends ConsumerWidget {
               Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
               const SizedBox(height: 2),
               Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-              if (trend != null)
-                Text(trend, style: TextStyle(fontSize: 12, color: trendUp ? _teal600 : const Color(0xFFA32D2D))),
+              if (trend != null) ...[
+                const SizedBox(height: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (trendUp ? _teal600 : const Color(0xFFA32D2D)).withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    trend,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: trendUp ? _teal600 : const Color(0xFFA32D2D),
+                    ),
+                  ),
+                ),
+              ],
               if (subtitle != null)
                 Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
               if (points != null && points.length >= 2) ...[
@@ -222,11 +224,19 @@ class _Sparkline extends StatelessWidget {
 
 // ---- Category donut ----
 
-class _CategoryDonutCard extends ConsumerWidget {
+class _CategoryDonutCard extends ConsumerStatefulWidget {
   const _CategoryDonutCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CategoryDonutCard> createState() => _CategoryDonutCardState();
+}
+
+class _CategoryDonutCardState extends ConsumerState<_CategoryDonutCard> {
+  // Legend entries the user has toggled off — the donut + centre total exclude these live.
+  final Set<int> _hidden = {};
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(categorySalesProvider);
     return _Card(
       title: 'Category mix',
@@ -236,27 +246,46 @@ class _CategoryDonutCard extends ConsumerWidget {
         data: (cats) {
           final sorted = [...cats]..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
           final top = sorted.take(5).toList();
-          final total = top.fold(0.0, (a, c) => a + c.totalAmount);
-          if (total <= 0) return const SizedBox(height: 100, child: Center(child: Text('No sales data yet.')));
+          final grandTotal = top.fold(0.0, (a, c) => a + c.totalAmount);
+          if (grandTotal <= 0) return const SizedBox(height: 100, child: Center(child: Text('No sales data yet.')));
+          final shownTotal = [
+            for (var i = 0; i < top.length; i++)
+              if (!_hidden.contains(i)) top[i].totalAmount,
+          ].fold(0.0, (a, b) => a + b);
           return Row(
             children: [
               SizedBox(
-                width: 110,
-                height: 110,
-                child: PieChart(
-                  PieChartData(
-                    centerSpaceRadius: 30,
-                    sectionsSpace: 2,
-                    sections: [
-                      for (var i = 0; i < top.length; i++)
-                        PieChartSectionData(
-                          value: top[i].totalAmount,
-                          color: _donutColors[i % _donutColors.length],
-                          radius: 22,
-                          showTitle: false,
-                        ),
-                    ],
-                  ),
+                width: 120,
+                height: 120,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    PieChart(
+                      PieChartData(
+                        centerSpaceRadius: 34,
+                        sectionsSpace: 2,
+                        sections: [
+                          for (var i = 0; i < top.length; i++)
+                            PieChartSectionData(
+                              // A hidden slice collapses to a sliver in a faded tint.
+                              value: _hidden.contains(i) ? 0.0001 : top[i].totalAmount,
+                              color: _hidden.contains(i)
+                                  ? _donutColors[i % _donutColors.length].withValues(alpha: 0.12)
+                                  : _donutColors[i % _donutColors.length],
+                              radius: 22,
+                              showTitle: false,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Sales', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                        Text(_compact(shownTotal), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
@@ -265,15 +294,22 @@ class _CategoryDonutCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (var i = 0; i < top.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          children: [
-                            Container(width: 10, height: 10, decoration: BoxDecoration(color: _donutColors[i % _donutColors.length], borderRadius: BorderRadius.circular(2))),
-                            const SizedBox(width: 6),
-                            Expanded(child: Text(top[i].categoryName, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
-                            Text('${(top[i].totalAmount / total * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                          ],
+                      InkWell(
+                        onTap: () => setState(() => _hidden.contains(i) ? _hidden.remove(i) : _hidden.add(i)),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Opacity(
+                          opacity: _hidden.contains(i) ? 0.4 : 1,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                Container(width: 10, height: 10, decoration: BoxDecoration(color: _donutColors[i % _donutColors.length], borderRadius: BorderRadius.circular(2))),
+                                const SizedBox(width: 6),
+                                Expanded(child: Text(top[i].categoryName, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+                                Text('${(top[i].totalAmount / grandTotal * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -285,6 +321,101 @@ class _CategoryDonutCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+// ---- Stock health gauge ----
+
+class _StockHealthCard extends ConsumerWidget {
+  const _StockHealthCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summary = ref.watch(dashboardSummaryProvider);
+    final lowStock = ref.watch(lowStockItemsProvider);
+    return _Card(
+      title: 'Stock health',
+      child: summary.when(
+        loading: () => const SizedBox(height: 150, child: Center(child: CircularProgressIndicator())),
+        error: (e, _) => Text('Could not load: $e'),
+        data: (s) {
+          final active = s.quickStats.activeProducts;
+          final low = lowStock.whenOrNull(data: (rows) => rows.length) ?? 0;
+          final inStock = (active - low).clamp(0, active);
+          final rate = active > 0 ? inStock / active : 0.0;
+          final pct = (rate * 100).round();
+          final color = pct >= 80
+              ? _teal600
+              : pct >= 60
+                  ? const Color(0xFFB8860B)
+                  : const Color(0xFFA32D2D);
+          return Column(
+            children: [
+              SizedBox(
+                height: 110,
+                width: 180,
+                child: CustomPaint(
+                  painter: _GaugePainter(rate, color),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('$pct%', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: color)),
+                        const Text('fill rate', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _dot(_teal600),
+                  Text(' $inStock in stock   ', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                  _dot(const Color(0xFFA32D2D)),
+                  Text(' $low low', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _dot(Color c) => Container(width: 8, height: 8, decoration: BoxDecoration(color: c, shape: BoxShape.circle));
+}
+
+/// A 180° top-half arc gauge (background track + coloured value arc).
+class _GaugePainter extends CustomPainter {
+  _GaugePainter(this.value, this.color);
+  final double value; // 0..1
+  final Color color;
+
+  static const double _pi = 3.1415926535;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 13.0;
+    final center = Offset(size.width / 2, size.height - 6);
+    final radius = (size.width / 2) - stroke / 2 - 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFE2E8F0);
+    final fill = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawArc(rect, _pi, _pi, false, track);
+    canvas.drawArc(rect, _pi, _pi * value.clamp(0.0, 1.0), false, fill);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GaugePainter old) => old.value != value || old.color != color;
 }
 
 // ---- Top products bars ----
@@ -415,39 +546,3 @@ class _ReceivablesAgingCard extends ConsumerWidget {
   }
 }
 
-// ---- GST summary ----
-
-class _GstCard extends ConsumerWidget {
-  const _GstCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(gstSummaryProvider);
-    return _Card(
-      title: 'GST (last 12 months)',
-      child: async.when(
-        loading: () => const SizedBox(height: 80, child: Center(child: CircularProgressIndicator())),
-        error: (e, _) => Text('Could not load: $e'),
-        data: (g) => Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _gstFigure('Output tax', g['output'] ?? 0, const Color(0xFF64748B)),
-            _gstFigure('Input tax', g['input'] ?? 0, const Color(0xFF64748B)),
-            _gstFigure('Net payable', g['net'] ?? 0, _teal600),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _gstFigure(String label, double value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-        const SizedBox(height: 2),
-        Text(_compact(value), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color)),
-      ],
-    );
-  }
-}
