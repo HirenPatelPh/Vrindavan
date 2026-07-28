@@ -63,8 +63,14 @@ class Auth extends _$Auth {
   }
 
   Future<void> logout() async {
-    await ref.read(authRepositoryProvider).logout();
+    // Flip to unauthenticated FIRST so go_router redirects to /login immediately — the UI must
+    // never be held hostage by a slow/failing network revoke or token-storage cleanup below.
     state = const AsyncData(null);
+    try {
+      await ref.read(authRepositoryProvider).logout();
+    } catch (_) {
+      // Best-effort cleanup; the user is already signed out in-memory regardless.
+    }
   }
 
   /// Called by ApiClient.onSessionExpired (wired in app.dart) when a refresh attempt fails —
