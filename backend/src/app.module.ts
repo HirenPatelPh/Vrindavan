@@ -17,6 +17,7 @@ import { PaginationInterceptor } from './common/interceptors/pagination.intercep
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { HealthModule } from './modules/health/health.module';
+import { TenantInfoModule } from './modules/tenant-info/tenant-info.module';
 import { UnitsModule } from './modules/units/units.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { SignupModule } from './modules/signup/signup.module';
@@ -41,6 +42,7 @@ import { PurchaseModule } from './modules/purchase/purchase.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AccessModule } from './modules/access/access.module';
+import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -66,6 +68,7 @@ import { AccessModule } from './modules/access/access.module';
     KyselyModule,
     TenantContextModule,
     HealthModule,
+    TenantInfoModule,
     AuthModule,
     SignupModule,
     DashboardModule,
@@ -90,6 +93,7 @@ import { AccessModule } from './modules/access/access.module';
     SalesModule,
     ReportsModule,
     AccessModule,
+    AuditModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

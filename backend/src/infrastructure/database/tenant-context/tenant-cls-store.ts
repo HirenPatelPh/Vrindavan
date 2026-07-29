@@ -11,6 +11,8 @@ export interface AppClsStore extends ClsStore {
   tenantId?: string;
   schemaName?: string;
   companyCode?: string;
+  /** Authenticated user id (JWT `sub`) — stamped onto the DB session so the audit trigger records who changed each row. */
+  userId?: string;
   /** The single physical connection opened for this request, scoped via KyselyService.db.connection(). */
   tenantDb?: Kysely<DB>;
 }

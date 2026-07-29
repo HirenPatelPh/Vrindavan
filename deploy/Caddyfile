@@ -1,12 +1,15 @@
-# Caddy config for Vrindavan.
+# Caddy config for Vrindavan — single domain / IP / smoke test (the SAFE default).
 #
 # SITE_ADDRESS controls the site + TLS behaviour:
-#   - a real domain  (app.yourdomain.com)  -> Caddy auto-provisions a Let's Encrypt HTTPS cert
-#   - ":80"                                 -> plain HTTP, useful for a first smoke test before DNS
+#   - a real domain (app.yourdomain.com) -> Caddy auto-provisions a Let's Encrypt HTTPS cert
+#   - ":80"                              -> plain HTTP (current IP deploy, e.g. http://50.6.44.23)
 #
-# All backend traffic (the NestJS global prefix /api, the excluded /health route, and the
-# /uploads static mount) is proxied to the backend container. Everything else is the Flutter
-# single-page app, so unknown paths fall back to index.html for client-side routing.
+# For the MULTI-TENANT SUBDOMAIN model (*.enrix.in) use deploy/Caddyfile.subdomains instead —
+# it adds on-demand TLS, which REQUIRES real hostnames and must NOT be used on :80 / a bare IP.
+#
+# All backend traffic (the NestJS `/api` prefix, the excluded `/health`, and the `/uploads`
+# static mount) is proxied to the backend; everything else is the Flutter SPA (index.html
+# fallback for client-side routing).
 
 {$SITE_ADDRESS} {
 	encode gzip zstd

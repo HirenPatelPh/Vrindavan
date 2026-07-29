@@ -96,3 +96,14 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 WHERE r.name = 'Viewer' AND p.action IN ('view','export','print')
 ON CONFLICT DO NOTHING;
+
+-- ---------- Audit log (Admin-only) ----------------------------------------------------------
+-- Defined AFTER the broad role grants above so it isn't swept into Manager/Viewer/etc's
+-- view-everything carve-outs — the audit trail is visible to Admin only.
+INSERT INTO permissions (module, action, code) VALUES ('audit_logs', 'view', 'audit_logs.view')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'Admin' AND p.code = 'audit_logs.view'
+ON CONFLICT DO NOTHING;

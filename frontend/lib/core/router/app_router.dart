@@ -26,6 +26,7 @@ import '../../features/purchase/purchase_registry.dart';
 import '../../features/reports/presentation/reports_home_screen.dart';
 import '../../features/reports/reports_registry.dart';
 import '../../features/access/presentation/access_home_screen.dart';
+import '../../features/audit/presentation/audit_log_screen.dart';
 import '../../features/access/presentation/users_screen.dart';
 import '../../features/access/presentation/roles_permissions_screen.dart';
 import '../../features/sales/presentation/customer_payment_detail_screen.dart';
@@ -274,6 +275,7 @@ GoRouter appRouter(Ref ref) {
               GoRoute(path: 'roles', builder: (context, state) => const RolesPermissionsScreen()),
             ],
           ),
+          GoRoute(path: '/audit', builder: (context, state) => const AuditLogScreen()),
         ],
       ),
     ],

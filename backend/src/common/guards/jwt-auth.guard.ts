@@ -41,6 +41,7 @@ export class JwtAuthGuard implements CanActivate {
     this.cls.set('tenantId', payload.tenantId);
     this.cls.set('schemaName', payload.schemaName);
     this.cls.set('companyCode', payload.companyCode);
+    this.cls.set('userId', payload.sub);
 
     return true;
   }
