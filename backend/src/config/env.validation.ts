@@ -9,6 +9,10 @@ export const envValidationSchema = Joi.object({
     .valid('trace', 'debug', 'info', 'warn', 'error', 'fatal')
     .default('info'),
 
+  // Parent domain for tenant subdomains, e.g. "enrix.in" (so vrindavan.enrix.in resolves the
+  // tenant from its subdomain label). Empty disables subdomain resolution (local dev / header-only).
+  BASE_DOMAIN: Joi.string().allow('').default(''),
+
   ACCESS_TOKEN_SECRET: Joi.string().min(16).required(),
   ACCESS_TOKEN_TTL: Joi.string().default('15m'),
   REFRESH_TOKEN_SECRET: Joi.string().min(16).required(),

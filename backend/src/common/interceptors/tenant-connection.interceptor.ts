@@ -34,6 +34,11 @@ export class TenantConnectionInterceptor implements NestInterceptor {
     return from(
       this.kysely.db.connection().execute(async (scopedDb) => {
         await sql.raw(`SET search_path TO ${pgQuoteIdent(schemaName)}, public`).execute(scopedDb);
+        // Stamp the acting user onto this connection so the audit trigger (trg_audit_log) records
+        // WHO changed each row. Session-scoped and re-applied every request, so a pooled connection
+        // never carries a previous user; an empty string (unauthenticated) → trigger records NULL.
+        const userId = this.cls.get('userId') ?? '';
+        await sql`SELECT set_config('app.current_user_id', ${userId}, false)`.execute(scopedDb);
         this.cls.set('tenantDb', scopedDb);
         return firstValueFrom(next.handle(), { defaultValue: undefined });
       }),

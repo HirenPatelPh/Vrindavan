@@ -31,8 +31,11 @@ RUN apt-get update \
 
 WORKDIR /app/frontend
 
-# Compile-time API origin. Passed via compose build args from .env (API_BASE_URL).
-ARG API_BASE_URL=http://localhost:3000/api
+# Compile-time API origin. LEAVE EMPTY for the subdomain model — the app then derives the API
+# base same-origin at runtime (vrindavan.enrix.in -> vrindavan.enrix.in/api), so one build serves
+# every tenant. Only set it (via compose build args / .env API_BASE_URL) for a fixed single-origin
+# deploy or a native build.
+ARG API_BASE_URL=
 
 # pub get first for layer caching.
 COPY frontend/pubspec.yaml frontend/pubspec.lock ./

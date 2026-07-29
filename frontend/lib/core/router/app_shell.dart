@@ -34,7 +34,7 @@ class AppShell extends ConsumerWidget {
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= _railBreakpoint;
     final isAdmin = session?.user.roles.contains('Admin') ?? false;
-    final routes = [..._baseRoutes, if (isAdmin) '/access'];
+    final routes = [..._baseRoutes, if (isAdmin) '/access', if (isAdmin) '/audit'];
     var selectedIndex = routes.indexWhere((r) => currentLocation.startsWith(r));
     if (selectedIndex < 0) selectedIndex = 0;
 
@@ -134,6 +134,11 @@ class AppShell extends ConsumerWidget {
                   const NavigationRailDestination(
                     icon: Icon(Icons.admin_panel_settings_outlined),
                     label: Text('Users & Access'),
+                  ),
+                if (isAdmin)
+                  const NavigationRailDestination(
+                    icon: Icon(Icons.history),
+                    label: Text('Audit Log'),
                   ),
               ],
             ),
@@ -257,6 +262,16 @@ class _AppDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(context);
                     context.go('/access');
+                  },
+                ),
+              if (isAdmin)
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('Audit Log'),
+                  selected: currentLocation.startsWith('/audit'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.go('/audit');
                   },
                 ),
             ],

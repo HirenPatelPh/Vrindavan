@@ -4,6 +4,8 @@ export interface AppConfig {
   databaseUrl: string;
   dbStatementTimeoutMs: number;
   logLevel: string;
+  /** Parent domain for tenant subdomains, e.g. "enrix.in" so <code>.enrix.in resolves the tenant. Empty = disabled. */
+  baseDomain: string;
   auth: {
     accessTokenSecret: string;
     accessTokenTtl: string;
@@ -28,6 +30,7 @@ export default (): AppConfig => ({
   databaseUrl: process.env.DATABASE_URL as string,
   dbStatementTimeoutMs: parseInt(process.env.DB_STATEMENT_TIMEOUT_MS ?? '15000', 10),
   logLevel: process.env.LOG_LEVEL ?? 'info',
+  baseDomain: (process.env.BASE_DOMAIN ?? '').toLowerCase().trim(),
   auth: {
     accessTokenSecret: process.env.ACCESS_TOKEN_SECRET as string,
     accessTokenTtl: process.env.ACCESS_TOKEN_TTL ?? '15m',
